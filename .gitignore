@@ -1,0 +1,16 @@
+## Ignore Visual Studio & .NET Build Artifacts
+.vs/
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Ignore OS generated files
+[Dd]esktop.ini
+Thumbs.db
+.DS_Store
+
+## Ignore temp backup files
+*.tmp
