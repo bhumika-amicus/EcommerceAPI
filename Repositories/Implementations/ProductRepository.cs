@@ -111,7 +111,8 @@ public class ProductRepository : IProductRepository
                 BrandId = reader.GetInt32(reader.GetOrdinal("BrandId")),
                 BrandName = reader.GetString(reader.GetOrdinal("BrandName")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
-                Price = reader.GetDecimal(reader.GetOrdinal("Price"))
+                Price = reader.GetDecimal(reader.GetOrdinal("Price")),
+                StockQuantity = reader.IsDBNull(reader.GetOrdinal("StockQuantity")) ? 0 : reader.GetInt32(reader.GetOrdinal("StockQuantity"))
             };
         }
 

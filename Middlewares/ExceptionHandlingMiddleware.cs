@@ -55,7 +55,6 @@ public class ExceptionHandlingMiddleware
         return exception switch
         {
             NotFoundException => StatusCodes.Status404NotFound,
-            KeyNotFoundException => StatusCodes.Status404NotFound,
             AuthenticationException => StatusCodes.Status401Unauthorized,
             System.Security.Authentication.AuthenticationException => StatusCodes.Status401Unauthorized,
             BusinessException => StatusCodes.Status400BadRequest,

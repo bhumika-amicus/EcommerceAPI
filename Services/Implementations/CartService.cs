@@ -104,9 +104,15 @@ public class CartService : ICartService
 
     public async Task<CartDto> ClearCartAsync(int customerId, CancellationToken cancellationToken = default)
     {
-        await _cartRepository.ClearCartAsync(customerId, cancellationToken);
-
-        _logger.LogInformation("Cart Cleared: All items removed from Cart for Customer {CustomerId}", customerId);
+        bool isCleared = await _cartRepository.ClearCartAsync(customerId, cancellationToken);
+        if (isCleared)
+        {
+            _logger.LogInformation("Cart Cleared: Items removed for Customer {CustomerId}", customerId);
+        }
+        else
+        {
+            _logger.LogInformation("Cart Clear Attempt: Cart was already empty for Customer {CustomerId}", customerId);
+        }
 
         return await GetCartByCustomerIdAsync(customerId, cancellationToken);
     }
