@@ -1,3 +1,4 @@
+using EcommerceAPI.Common;
 using EcommerceAPI.Common.Exceptions;
 using EcommerceAPI.Repositories;
 using Microsoft.AspNetCore.Http;
@@ -57,6 +58,7 @@ public class ExceptionHandlingMiddleware
             NotFoundException => StatusCodes.Status404NotFound,
             AuthenticationException => StatusCodes.Status401Unauthorized,
             System.Security.Authentication.AuthenticationException => StatusCodes.Status401Unauthorized,
+            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
             BusinessException => StatusCodes.Status400BadRequest,
             ConflictException => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status500InternalServerError

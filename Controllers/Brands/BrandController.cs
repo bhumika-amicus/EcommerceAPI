@@ -17,6 +17,7 @@ public class BrandController : ControllerBase
     }
 
     [HttpGet]
+    [ResponseCache(Duration = 120)]
     public async Task<ActionResult<ApiResponse<IEnumerable<BrandDto>>>> GetAll(CancellationToken cancellationToken)
     {
         var brands = await _brandService.GetAllBrandsAsync(cancellationToken);
@@ -30,6 +31,7 @@ public class BrandController : ControllerBase
     }
 
     [HttpGet("{brandId:int}")]
+    [ResponseCache(Duration = 120)]
     public async Task<ActionResult<ApiResponse<BrandDto>>> GetById(int brandId, CancellationToken cancellationToken)
     {
         if (brandId <= 0)

@@ -52,6 +52,7 @@ public class ProductController : ControllerBase
 
     // GET: api/products
     [HttpGet]
+    [ResponseCache(Duration = 60)]
     public async Task<ActionResult<ApiResponse<PagedResult<ProductDto>>>> GetAll([FromQuery] ProductQueryDto query, CancellationToken cancellationToken)
     {
         var result = await _productService.GetAllProductsAsync(query, cancellationToken);

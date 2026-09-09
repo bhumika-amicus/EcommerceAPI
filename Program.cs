@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using EcommerceAPI.Common.Options;
 using EcommerceAPI.Mappings;
@@ -14,6 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 
+
 builder.Services.AddOptions<JwtOptions>()
     .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
     .Validate(options => !string.IsNullOrWhiteSpace(options.Key), "Jwt:Key is required.")
@@ -27,6 +29,13 @@ builder.Services.AddOptions<DatabaseOptions>()
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 // Add services to the container.
 builder.Services.AddControllers();
+
+
+//add caching 
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCaching();
+
+
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
 builder.Services.AddValidatorsFromAssemblyContaining<ProductQueryValidator>();
@@ -55,6 +64,7 @@ builder.Services
         };
     });
 
+
 // Register Repositories
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
@@ -64,6 +74,9 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IErrorLogRepository, ErrorLogRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped< IShippingMethodRepository, ShippingMethodRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 // Register Services
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -73,6 +86,19 @@ builder.Services.AddScoped<IProductPriceService, ProductPriceService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+builder.Services.AddScoped<IShippingMethodService,ShippingMethodService>();
+builder.Services.AddScoped<ICheckoutService, CheckoutService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+
+builder.Services.AddHttpClient<IMockPaymentClient, MockPaymentClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7266/");
+});
+
+
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -108,6 +134,9 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 app.UseHttpsRedirection();
+
+// Response Caching Middleware 
+app.UseResponseCaching();
 
 // CORS Policy (Task 6)
 app.UseCors("AllowFrontendApp");

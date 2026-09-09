@@ -17,6 +17,7 @@ public class CategoryController : ControllerBase
     }
 
     [HttpGet]
+    [ResponseCache(Duration = 120)]
     public async Task<ActionResult<ApiResponse<IEnumerable<CategoryDto>>>> GetAll(CancellationToken cancellationToken)
     {
         var categories = await _categoryService.GetAllCategoriesAsync(cancellationToken);
@@ -30,6 +31,7 @@ public class CategoryController : ControllerBase
     }
 
     [HttpGet("{categoryId:int}")]
+    [ResponseCache(Duration = 120)]
     public async Task<ActionResult<ApiResponse<CategoryDto>>> GetById(int categoryId, CancellationToken cancellationToken)
     {
         if (categoryId <= 0)
