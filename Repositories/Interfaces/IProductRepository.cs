@@ -1,3 +1,4 @@
+using System;
 using EcommerceAPI.Common;
 using EcommerceAPI.DTOs.Products;
 using EcommerceAPI.Models;
@@ -18,4 +19,10 @@ public interface IProductRepository
     // Product Availability Methods
     Task<ProductAvailabilityDto?> GetProductAvailabilityAsync(int productId, CancellationToken cancellationToken = default);
     Task<IEnumerable<BatchStockValidationResultDto>> ValidateBatchStockAsync(IEnumerable<BatchStockCheckItemDto> items, CancellationToken cancellationToken = default);
+
+    //method for file upload
+    
+    Task<bool> UpdateImagePathAsync( int productId, string imagePath, CancellationToken cancellationToken = default);
+
+
 }

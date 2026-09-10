@@ -8,6 +8,8 @@ using EcommerceAPI.DTOs.Products;
 using EcommerceAPI.Models.Orders;
 using EcommerceAPI.Repositories;
 
+using Microsoft.Extensions.Logging;
+
 namespace EcommerceAPI.Services;
 
 public class OrderService : IOrderService
@@ -16,13 +18,23 @@ public class OrderService : IOrderService
     private readonly ICartService _cartService;
     private readonly IProductService _productService;
     private readonly IShippingMethodService _shippingMethodService;
+    private readonly IAuditLogRepository _auditLogRepository;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService( IOrderRepository orderRepository, ICartService cartService, IProductService productService,  IShippingMethodService shippingMethodService){
-
+    public OrderService(
+        IOrderRepository orderRepository, 
+        ICartService cartService, 
+        IProductService productService,  
+        IShippingMethodService shippingMethodService,
+        IAuditLogRepository auditLogRepository,
+        ILogger<OrderService> logger)
+    {
         _orderRepository = orderRepository;
         _cartService = cartService;
         _productService = productService;
         _shippingMethodService = shippingMethodService;
+        _auditLogRepository = auditLogRepository;
+        _logger = logger;
     }
 
     public async Task<OrderDto> CreateOrderAsync( int customerId, CheckoutRequestDto request, CancellationToken cancellationToken = default)
@@ -30,6 +42,7 @@ public class OrderService : IOrderService
         var cart = await _cartService.GetCartByCustomerIdAsync(customerId, cancellationToken);
 
         if (cart.Items.Count == 0) {
+            _logger.LogWarning("Customer {CustomerId} attempted to checkout with an empty cart.", customerId);
             throw new BusinessException("Cannot create an order because the cart is empty."); 
         }
 
@@ -41,7 +54,9 @@ public class OrderService : IOrderService
         var stockResults = await _productService.ValidateBatchStockAsync(stockItems, cancellationToken);
         var unavailableItems = stockResults.Where(x => !x.IsAvailable).ToList();
         
-        if (unavailableItems.Any()) { var message = string.Join("; ", unavailableItems.Select(x => x.Message));
+        if (unavailableItems.Any()) { 
+            var message = string.Join("; ", unavailableItems.Select(x => x.Message));
+            _logger.LogWarning("Customer {CustomerId} checkout failed due to unavailable products: {Message}", customerId, message);
             throw new BusinessException($"Some products are no longer available: {message}"); 
         }
 
@@ -93,9 +108,22 @@ public class OrderService : IOrderService
                 "Order was created but could not be retrieved.");
         }
 
+        // Clear the cart after successful order creation
+        await _cartService.ClearCartAsync(customerId, cancellationToken);
+        _logger.LogInformation("Cart cleared for customer {CustomerId} after creating order {OrderId}.", customerId, orderId);
+
+        // Audit Logging
+        await _auditLogRepository.LogAsync(
+            customerId.ToString(),
+            "CreateOrder",
+            "Order",
+            orderId.ToString(),
+            null,
+            null,
+            200,
+            cancellationToken);
+
         return createdOrder;
-
-
     }
 
     public async Task<OrderDto?> GetOrderByIdAsync( int customerId, int orderId, CancellationToken cancellationToken = default)
@@ -167,6 +195,19 @@ public class OrderService : IOrderService
         {
             throw new NotFoundException($"Order with ID {orderId} was not found.");
         }
+
+        _logger.LogInformation("Order {OrderId} cancelled by customer {CustomerId}.", orderId, customerId);
+
+        // Audit Logging
+        await _auditLogRepository.LogAsync(
+            customerId.ToString(),
+            "CancelOrder",
+            "Order",
+            orderId.ToString(),
+            null,
+            null,
+            200,
+            cancellationToken);
 
         return updatedOrder;
     }

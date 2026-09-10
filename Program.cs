@@ -11,6 +11,7 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Asp.Versioning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,8 +28,23 @@ builder.Services.AddOptions<DatabaseOptions>()
     .ValidateOnStart();
 
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+
 // Add services to the container.
 builder.Services.AddControllers();
+
+//Add API Versioning
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    })
+    .AddApiExplorer(options =>
+    {
+        options.GroupNameFormat = "'v'VVV";
+        options.SubstituteApiVersionInUrl = true;
+    });
 
 
 //add caching 
@@ -96,8 +112,6 @@ builder.Services.AddHttpClient<IMockPaymentClient, MockPaymentClient>(client =>
 {
     client.BaseAddress = new Uri("https://localhost:7266/");
 });
-
-
 
 
 builder.Services.AddEndpointsApiExplorer();

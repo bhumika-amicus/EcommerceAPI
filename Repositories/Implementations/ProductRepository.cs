@@ -74,7 +74,8 @@ public class ProductRepository : IProductRepository
                 BrandName = reader.GetString(reader.GetOrdinal("BrandName")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
                 Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                StockQuantity = reader.IsDBNull(reader.GetOrdinal("StockQuantity"))? 0 : reader.GetInt32(reader.GetOrdinal("StockQuantity"))
+                StockQuantity = reader.IsDBNull(reader.GetOrdinal("StockQuantity"))? 0 : reader.GetInt32(reader.GetOrdinal("StockQuantity")),
+                ImagePath = reader.IsDBNull(reader.GetOrdinal("ImagePath")) ? null : reader.GetString(reader.GetOrdinal("ImagePath"))
 
             });
         }
@@ -112,7 +113,8 @@ public class ProductRepository : IProductRepository
                 BrandName = reader.GetString(reader.GetOrdinal("BrandName")),
                 Rating = reader.GetDecimal(reader.GetOrdinal("Rating")),
                 Price = reader.GetDecimal(reader.GetOrdinal("Price")),
-                StockQuantity = reader.IsDBNull(reader.GetOrdinal("StockQuantity")) ? 0 : reader.GetInt32(reader.GetOrdinal("StockQuantity"))
+                StockQuantity = reader.IsDBNull(reader.GetOrdinal("StockQuantity")) ? 0 : reader.GetInt32(reader.GetOrdinal("StockQuantity")),
+                ImagePath = reader.IsDBNull(reader.GetOrdinal("ImagePath")) ? null : reader.GetString(reader.GetOrdinal("ImagePath"))
             };
         }
 
@@ -260,5 +262,39 @@ public class ProductRepository : IProductRepository
 
         return results;
     }
+
+
+   
+    public async Task<bool> UpdateImagePathAsync(
+        int productId,
+        string imagePath,
+        CancellationToken cancellationToken = default)
+        {
+            await using var connection = new SqlConnection(_connectionString);
+
+            await using var command = new SqlCommand(
+                "BhumikaEcom.usp_Product_UpdateImagePath",
+                connection);
+
+            command.CommandType = CommandType.StoredProcedure;
+
+            command.Parameters.Add("@ProductId", SqlDbType.Int).Value = productId;
+
+            command.Parameters.Add(
+                "@ImagePath",
+                SqlDbType.NVarChar,
+                500).Value = imagePath;
+
+            await connection.OpenAsync(cancellationToken);
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+
+            int rowsAffected = result != null
+                ? Convert.ToInt32(result)
+                : 0;
+
+            return rowsAffected > 0;
+        }
+
 
 }

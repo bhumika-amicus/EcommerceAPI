@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using EcommerceAPI.Common;
 using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.DTOs.Products;
@@ -7,7 +8,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EcommerceAPI.Controllers.Products;
 
-[Route("api/products")]
+
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/products")]
 [ApiController]
 public class ProductController : ControllerBase
 {
@@ -201,5 +204,36 @@ public class ProductController : ControllerBase
             Message = "Batch stock validation completed.",
             Data = results
         });
+    }
+
+    // Upload Product Image
+    [HttpPost("{id}/image")]
+    public async Task<IActionResult> UploadImage( int id, IFormFile file, CancellationToken cancellationToken) {
+
+        var isUploaded = await _productService.UploadProductImageAsync( id, file, cancellationToken); 
+        if (!isUploaded) {
+            return NotFound(new { Message = "Product not found." });
+        }
+        return Ok(new { Message = "Image uploaded successfully." }); 
+    }
+
+    [HttpGet("{id}/image")]
+    [ResponseCache(Duration = 86400, Location = ResponseCacheLocation.Client)]
+    public async Task<IActionResult> DownloadImage( int id, CancellationToken cancellationToken)
+    {
+        var result = await _productService.DownloadProductImageAsync( id, cancellationToken);
+
+        if (result == null)
+        {
+            return NotFound(new
+            {
+                Message = "Product image not found."
+            });
+        }
+
+        return File(
+            result.Value.FileStream,
+            result.Value.ContentType,
+            result.Value.FileName);
     }
 }
