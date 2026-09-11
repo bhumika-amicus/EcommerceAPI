@@ -22,7 +22,7 @@ public class MockPaymentClient : IMockPaymentClient
             SimulateFailure = simulateFailure
         };
 
-        var response = await _httpClient.PostAsJsonAsync( "api/mock-payments", request, cancellationToken);
+        var response = await _httpClient.PostAsJsonAsync( "api/v1/mock-payments", request, cancellationToken);
 
         response.EnsureSuccessStatusCode();
 

@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EcommerceAPI.Common;
@@ -10,7 +11,8 @@ namespace EcommerceAPI.Controllers.Checkout;
 
 [Authorize]
 [ApiController]
-[Route("api/checkout")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/checkout")]
 public class CheckoutController : ControllerBase
 {
     private readonly ICheckoutService _checkoutService;
@@ -37,9 +39,8 @@ public class CheckoutController : ControllerBase
         }
     }
 
-    // GET: api/checkout/shipping-methods OR api/shipping-methods
+    // GET: api/checkout/shipping-methods
     [HttpGet("shipping-methods")]
-    [HttpGet("/api/shipping-methods")]
     [AllowAnonymous]
     [ResponseCache(Duration = 300)]
     public async Task<ActionResult<ApiResponse<IEnumerable<ShippingMethodDto>>>> GetShippingMethods(CancellationToken cancellationToken = default)

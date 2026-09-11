@@ -1,4 +1,4 @@
-
+using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EcommerceAPI.Common;
@@ -14,7 +14,8 @@ namespace EcommerceAPI.Controllers.Orders;
 
 [Authorize]
 [ApiController]
-[Route("api/orders")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/orders")]
 public class OrderController : ControllerBase
 {
     private readonly IOrderService _orderService;

@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EcommerceAPI.Common;
@@ -9,7 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace EcommerceAPI.Controllers.Carts;
 
 [Authorize]
-[Route("api/cart")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/cart")]
 [ApiController]
 public class CartController : ControllerBase
 {

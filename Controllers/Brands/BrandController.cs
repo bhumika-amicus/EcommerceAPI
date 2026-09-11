@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using EcommerceAPI.Common;
 using EcommerceAPI.DTOs.Brands;
 using EcommerceAPI.Services;
@@ -5,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EcommerceAPI.Controllers.Brands;
 
-[Route("api/brands")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/brands")]
 [ApiController]
 public class BrandController : ControllerBase
 {

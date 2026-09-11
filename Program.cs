@@ -168,7 +168,9 @@ builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 builder.Services.AddHttpClient<IMockPaymentClient, MockPaymentClient>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7266/");
+    var baseUrl = builder.Configuration.GetSection("MockPaymentApi:BaseUrl").Value 
+                  ?? "https://localhost:7266/"; // Fallback
+    client.BaseAddress = new Uri(baseUrl);
 });
 
 

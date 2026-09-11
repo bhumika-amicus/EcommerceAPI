@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using EcommerceAPI.Common;
 using EcommerceAPI.DTOs.ProductPrices;
 using EcommerceAPI.Services;
@@ -5,7 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EcommerceAPI.Controllers.ProductPrices;
 
-[Route("api/product-prices")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/product-prices")]
 [ApiController]
 public class ProductPriceController : ControllerBase
 {

@@ -1,11 +1,12 @@
-﻿
+using Asp.Versioning;
 using EcommerceAPI.DTOs.Payments;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EcommerceAPI.Controllers.MockPayments;
 
 [ApiController]
-[Route("api/mock-payments")]
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/mock-payments")]
 public class MockPaymentController : ControllerBase
 {
     [HttpPost]

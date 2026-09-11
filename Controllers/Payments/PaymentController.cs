@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EcommerceAPI.Common;
@@ -9,7 +10,8 @@ namespace EcommerceAPI.Controllers.Payments;
 
 [Authorize]
 [ApiController]
-[Route("api/orders/{orderId}/payments")] 
+[ApiVersion(1.0)]
+[Route("api/v{version:apiVersion}/orders/{orderId}/payments")] 
 public class PaymentController : ControllerBase {
 
     private readonly IPaymentService _paymentService;
