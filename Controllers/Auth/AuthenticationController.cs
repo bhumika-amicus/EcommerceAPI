@@ -47,4 +47,20 @@ public class AuthenticationController : ControllerBase
             Data = result
         });
     }
+
+  
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto request, CancellationToken cancellationToken)
+    {
+            var result = await _authenticationService.RefreshTokenAsync( request.RefreshToken, cancellationToken);
+
+            return Ok(new ApiResponse<RefreshTokenResponseDto>
+            {
+                Success = true,
+                Message = "Token refreshed successfully.",
+                Data = result
+            });
+    }
+
+
 }

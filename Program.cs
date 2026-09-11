@@ -1,3 +1,5 @@
+
+using System.Threading.RateLimiting;
 using System;
 using System.Text;
 using EcommerceAPI.Common.Options;
@@ -12,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Asp.Versioning;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +54,46 @@ builder.Services
 builder.Services.AddMemoryCache();
 builder.Services.AddResponseCaching();
 
+//add rate limiter
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        httpContext =>
+        {
+            var userId = httpContext.User.FindFirst("sub")?.Value
+                         ?? httpContext.User.FindFirst("userId")?.Value;
+
+            var partitionKey = userId != null 
+                ? $"user:{userId}" 
+                : $"anonymous:{httpContext.Connection.RemoteIpAddress}";
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 100,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                });
+        });
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        }
+        else
+        {
+            context.HttpContext.Response.Headers.RetryAfter = "60";
+        }
+
+        await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken: token);
+    };
+});
+
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
@@ -79,6 +122,18 @@ builder.Services
             ClockSkew = TimeSpan.Zero
         };
     });
+builder.Services
+    .AddAuthorization(options =>{
+    options.AddPolicy("CanManageProducts", policy =>
+    {
+        policy.RequireClaim("CanManageProducts", "true");
+    });
+
+    options.AddPolicy("CanManageOrders", policy =>
+    {
+        policy.RequireClaim("CanManageOrders", "true");
+    });
+});
 
 
 // Register Repositories
@@ -93,6 +148,7 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped< IShippingMethodRepository, ShippingMethodRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 
 // Register Services
 builder.Services.AddScoped<IProductService, ProductService>();
@@ -106,6 +162,8 @@ builder.Services.AddScoped<IShippingMethodService,ShippingMethodService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IAddressService, AddressService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 
 builder.Services.AddHttpClient<IMockPaymentClient, MockPaymentClient>(client =>
@@ -115,7 +173,36 @@ builder.Services.AddHttpClient<IMockPaymentClient, MockPaymentClient>(client =>
 
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "EcommerceAPI", Version = "v1" });
+
+    // Configure Swagger to ask for a JWT token
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 // Configure Named CORS Policy for Frontend Application (Task 6)
 builder.Services.AddCors(options =>
@@ -149,14 +236,17 @@ app.UseMiddleware<RequestLoggingMiddleware>();
 
 app.UseHttpsRedirection();
 
-// Response Caching Middleware 
-app.UseResponseCaching();
-
 // CORS Policy (Task 6)
 app.UseCors("AllowFrontendApp");
 
 
 app.UseAuthentication();
+
+app.UseRateLimiter();
+
+// Response Caching Middleware 
+app.UseResponseCaching();
+
 app.UseAuthorization();
 
 app.MapControllers();

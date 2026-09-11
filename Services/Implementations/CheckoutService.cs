@@ -10,12 +10,14 @@ public class CheckoutService : ICheckoutService
     private readonly ICartService _cartService;
     private readonly IProductService _productService;
     private readonly IShippingMethodService _shippingMethodService;
+    private readonly IAddressService _addressService;
 
-    public CheckoutService( ICartService cartService, IProductService productService, IShippingMethodService shippingMethodService)
+    public CheckoutService( ICartService cartService, IProductService productService, IShippingMethodService shippingMethodService,IAddressService addressService)
     {
         _cartService = cartService;
         _productService = productService;
         _shippingMethodService = shippingMethodService;
+        _addressService = addressService;
     }
 
 
@@ -65,7 +67,7 @@ public class CheckoutService : ICheckoutService
         var priceChangeMessages = cart.Items.Where(item => item.HasPriceChanged).Select(item => item.PriceChangeMessage).ToList();
 
 
-        // 10. Get selected shipping method
+        // 10. Get selected shipping method 
         var shippingMethod =
             await _shippingMethodService.GetShippingMethodByIdAsync( dto.ShippingMethodId,  cancellationToken);
 
@@ -87,11 +89,30 @@ public class CheckoutService : ICheckoutService
         // 14. Calculate final total
         var totalAmount = subtotal + shippingFee + taxAmount;
 
-        // 15. Return checkout preview
+        //15. get user address
+        var address = await _addressService.GetAddressByUserIdAsync(customerId, cancellationToken);
+
+        if (address == null)
+        {
+            throw new BusinessException( "No shipping address found. Please add an address before checkout.");
+        }
+
+        var shippingAddress = string.Join(", ", new[]
+        {
+            address.AddressLine1,
+            address.AddressLine2,
+            address.City,
+            address.State,
+            address.PostalCode,
+            address.Country
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+
+        // 16. Return checkout preview
         return new CheckoutDto
         {
             Items = checkoutItems,
-            ShippingAddress = dto.ShippingAddress,
+            ShippingAddress = shippingAddress,
             ShippingMethodId = shippingMethod.ShippingMethodId,
             ShippingMethod = shippingMethod.Name,
             Subtotal = subtotal,

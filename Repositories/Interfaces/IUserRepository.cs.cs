@@ -7,4 +7,6 @@ public interface IUserRepository
     Task<int> CreateUserAsync( RegisterDto dto, string passwordHash, CancellationToken cancellationToken = default);
 
     Task<UserLoginDataDto?> GetUserByEmailAsync( string email, CancellationToken cancellationToken = default);
+
+    Task<UserLoginDataDto?> GetUserByIdAsync(  int userId, CancellationToken cancellationToken = default);
 }

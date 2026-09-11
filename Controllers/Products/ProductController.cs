@@ -5,7 +5,9 @@ using EcommerceAPI.DTOs.Products;
 using EcommerceAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 namespace EcommerceAPI.Controllers.Products;
 
 
@@ -33,7 +35,7 @@ public class ProductController : ControllerBase
                 Message = "Product ID must be greater than 0."
             });
         }
-
+     // Fetch the product from the database (Normal behavior)
         var product = await _productService.GetProductByIdAsync(productId, cancellationToken);
 
         if (product == null)
@@ -45,6 +47,18 @@ public class ProductController : ControllerBase
             });
         }
 
+    //generate the etag
+        var etag = GenerateETag(product);
+
+    //Check if the client sent an "If-None-Match" header and its matching our tag then return 304 not modified
+        if (Request.Headers.TryGetValue("If-None-Match", out var clientETag) && clientETag == etag)
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+    //add the etag to the response header if client Etags doesnt match
+        Response.Headers.ETag = etag;
+
         return Ok(new ApiResponse<ProductDto>
         {
             Success = true,
@@ -55,10 +69,18 @@ public class ProductController : ControllerBase
 
     // GET: api/products
     [HttpGet]
-    [ResponseCache(Duration = 60)]
     public async Task<ActionResult<ApiResponse<PagedResult<ProductDto>>>> GetAll([FromQuery] ProductQueryDto query, CancellationToken cancellationToken)
     {
         var result = await _productService.GetAllProductsAsync(query, cancellationToken);
+
+        var etag = GenerateETag(result);
+
+        if (Request.Headers.TryGetValue("If-None-Match", out var clientETag) && clientETag == etag)
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        Response.Headers.ETag = etag;
 
         return Ok(new ApiResponse<PagedResult<ProductDto>>
         {
@@ -70,7 +92,7 @@ public class ProductController : ControllerBase
 
     // POST: api/products (Create Product)
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "CanManageProducts")]
     [AuditLog("PRODUCT_CREATE", "Products")]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Create([FromBody] CreateProductDto dto, CancellationToken cancellationToken)
     {
@@ -96,7 +118,7 @@ public class ProductController : ControllerBase
 
     // PUT: api/products/{productId} (Update Product)
     [HttpPut("{productId:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "CanManageProducts")]
     [AuditLog("PRODUCT_UPDATE", "Products")]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Update(int productId, [FromBody] UpdateProductDto dto, CancellationToken cancellationToken)
     {
@@ -131,7 +153,7 @@ public class ProductController : ControllerBase
 
     // DELETE: api/products/{productId} (Delete Product)
     [HttpDelete("{productId:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "CanManageProducts")]
     [AuditLog("PRODUCT_DELETE", "Products")]
     public async Task<ActionResult<ApiResponse<int>>> Delete(int productId, CancellationToken cancellationToken)
     {
@@ -185,6 +207,15 @@ public class ProductController : ControllerBase
             });
         }
 
+        var etag = GenerateETag(availability);
+
+        if (Request.Headers.TryGetValue("If-None-Match", out var clientETag) && clientETag == etag)
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        Response.Headers.ETag = etag;
+
         return Ok(new ApiResponse<ProductAvailabilityDto>
         {
             Success = true,
@@ -208,6 +239,7 @@ public class ProductController : ControllerBase
 
     // Upload Product Image
     [HttpPost("{id}/image")]
+    [Authorize(Policy = "CanManageProducts")]
     public async Task<IActionResult> UploadImage( int id, IFormFile file, CancellationToken cancellationToken) {
 
         var isUploaded = await _productService.UploadProductImageAsync( id, file, cancellationToken); 
@@ -235,5 +267,43 @@ public class ProductController : ControllerBase
             result.Value.FileStream,
             result.Value.ContentType,
             result.Value.FileName);
+    }
+
+    
+    [HttpPost("bulk")]
+    [Authorize(Policy = "CanManageProducts")]
+    public async Task<ActionResult<BulkCreateProductResponseDto>> BulkCreateProducts( [FromBody] BulkCreateProductRequestDto request,
+        CancellationToken cancellationToken)
+        {
+            var result = await _productService.BulkCreateProductsAsync( request.Products,
+                cancellationToken);
+
+            return Ok(result);
+    }
+
+
+    [HttpPut("bulk/inventory")]
+    [Authorize(Policy = "CanManageProducts")]
+    public async Task<IActionResult> BulkUpdateInventory( [FromBody] BulkInventoryUpdateRequestDto request,
+        CancellationToken cancellationToken)
+        {
+            var result = await _productService.BulkUpdateInventoryAsync(
+                request.Items,
+                cancellationToken);
+
+            return Ok(new ApiResponse<BulkInventoryUpdateResponseDto>
+            {
+                Success = true,
+                Message = "Bulk inventory update completed.",
+                Data = result
+            });
+        }
+
+    private string GenerateETag(object obj)
+    {
+        var json = JsonSerializer.Serialize(obj);
+        var bytes = Encoding.UTF8.GetBytes(json);
+        var hash = MD5.HashData(bytes);
+        return $"\"{Convert.ToBase64String(hash)}\"";
     }
 }

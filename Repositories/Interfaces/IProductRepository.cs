@@ -24,5 +24,9 @@ public interface IProductRepository
     
     Task<bool> UpdateImagePathAsync( int productId, string imagePath, CancellationToken cancellationToken = default);
 
+    //bulk product upload
+    Task<BulkCreateProductResponseDto> BulkCreateProductsAsync( List<CreateProductDto> products, CancellationToken cancellationToken = default);
 
+    //bulk inventory update
+    Task<BulkInventoryUpdateResponseDto> BulkUpdateInventoryAsync(List<BulkInventoryUpdateItemDto> items, CancellationToken cancellationToken = default);
 }

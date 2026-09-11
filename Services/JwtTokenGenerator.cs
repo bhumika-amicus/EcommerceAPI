@@ -30,6 +30,12 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             claims.Add(new Claim(ClaimTypes.Role, role));
         }
 
+        if (roles.Contains("Admin"))
+        {
+            claims.Add(new Claim("CanManageProducts", "true"));
+            claims.Add(new Claim("CanManageOrders", "true"));
+        }
+
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 

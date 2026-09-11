@@ -96,6 +96,24 @@ public class OrderRepository : IOrderRepository
                 LineTotal = reader.GetDecimal(reader.GetOrdinal("LineTotal"))
             });
         }
+
+        // Result Set 3: Order Status History
+        
+        if (await reader.NextResultAsync(cancellationToken))
+        {
+            order.StatusHistory = new List<OrderStatusHistoryDto>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                order.StatusHistory.Add(new OrderStatusHistoryDto
+                {
+                    Status = reader.GetString(reader.GetOrdinal("Status")),
+                    Comment = reader.IsDBNull(reader.GetOrdinal("Comment")) ? null : reader.GetString(reader.GetOrdinal("Comment")),
+                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("CreatedAt"))
+                });
+            }
+        }
+
+
         return order;
     }
 

@@ -83,4 +83,55 @@ public class UserRepository : IUserRepository
 
         return user;
     }
+    public async Task<UserLoginDataDto?> GetUserByIdAsync(  int userId, CancellationToken cancellationToken = default)
+        {
+            await using var connection = new SqlConnection(_connectionString);
+
+            await using var command = new SqlCommand( "BhumikaEcom.usp_User_GetById", connection);
+
+            command.CommandType = CommandType.StoredProcedure;
+
+            command.Parameters.Add("@UserId", SqlDbType.Int)
+                .Value = userId;
+
+            await connection.OpenAsync(cancellationToken);
+
+            await using var reader = await command.ExecuteReaderAsync( cancellationToken);
+
+            UserLoginDataDto? user = null;
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (user == null)
+                {
+                    user = new UserLoginDataDto
+                    {
+                        UserId = reader.GetInt32(
+                            reader.GetOrdinal("UserId")),
+
+                        FullName = reader.GetString(
+                            reader.GetOrdinal("FullName")),
+
+                        Email = reader.GetString(
+                            reader.GetOrdinal("Email")),
+
+                        PasswordHash = reader.GetString(
+                            reader.GetOrdinal("PasswordHash")),
+
+                        IsActive = reader.GetBoolean(
+                            reader.GetOrdinal("IsActive")),
+
+                        Roles = new List<string>()
+                    };
+                }
+
+                user.Roles.Add(
+                    reader.GetString(
+                        reader.GetOrdinal("RoleName")));
+            }
+
+            return user;
+        }
+
+
 }

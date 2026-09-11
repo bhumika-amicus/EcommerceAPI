@@ -22,5 +22,8 @@ public interface IProductService
 
     Task<(Stream FileStream, string ContentType, string FileName)?> DownloadProductImageAsync(int productId, CancellationToken cancellationToken = default);
 
+    Task<BulkCreateProductResponseDto> BulkCreateProductsAsync( List<CreateProductDto> products,  CancellationToken cancellationToken = default);
+
+   Task<BulkInventoryUpdateResponseDto> BulkUpdateInventoryAsync(List<BulkInventoryUpdateItemDto> items, CancellationToken cancellationToken = default);
 
 }

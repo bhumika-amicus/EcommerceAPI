@@ -1,10 +1,12 @@
 
+using System.Net;
 using EcommerceAPI.Common;
 using EcommerceAPI.Common.Exceptions;
 using EcommerceAPI.DTOs.Cart;
 using EcommerceAPI.DTOs.Checkout;
 using EcommerceAPI.DTOs.Orders;
 using EcommerceAPI.DTOs.Products;
+using EcommerceAPI.Models;
 using EcommerceAPI.Models.Orders;
 using EcommerceAPI.Repositories;
 
@@ -20,6 +22,7 @@ public class OrderService : IOrderService
     private readonly IShippingMethodService _shippingMethodService;
     private readonly IAuditLogRepository _auditLogRepository;
     private readonly ILogger<OrderService> _logger;
+    private readonly IAddressService _addressService;
 
     public OrderService(
         IOrderRepository orderRepository, 
@@ -27,7 +30,9 @@ public class OrderService : IOrderService
         IProductService productService,  
         IShippingMethodService shippingMethodService,
         IAuditLogRepository auditLogRepository,
-        ILogger<OrderService> logger)
+        ILogger<OrderService> logger,
+       IAddressService addressService
+        )
     {
         _orderRepository = orderRepository;
         _cartService = cartService;
@@ -35,6 +40,7 @@ public class OrderService : IOrderService
         _shippingMethodService = shippingMethodService;
         _auditLogRepository = auditLogRepository;
         _logger = logger;
+        _addressService = addressService;
     }
 
     public async Task<OrderDto> CreateOrderAsync( int customerId, CheckoutRequestDto request, CancellationToken cancellationToken = default)
@@ -68,6 +74,26 @@ public class OrderService : IOrderService
                 $"Shipping method with ID {request.ShippingMethodId} was not found.");
         }
 
+
+        var address = await _addressService.GetAddressByUserIdAsync( customerId, cancellationToken);
+
+        if (address == null)
+        {
+            throw new BusinessException(
+                "No shipping address found. Please add an address before placing the order.");
+        }
+
+        var shippingAddress = string.Join(", ", new[]
+       {
+            address.AddressLine1,
+            address.AddressLine2,
+            address.City,
+            address.State,
+            address.PostalCode,
+            address.Country
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+
         var orderItems = cart.Items.Select(item => new CreateOrderItemModel{
             ProductId = item.ProductId,
             ProductName = item.ProductName,
@@ -90,7 +116,7 @@ public class OrderService : IOrderService
         {
             CustomerId = customerId,
             ShippingMethodId = request.ShippingMethodId,
-            ShippingAddress = request.ShippingAddress,
+            ShippingAddress = shippingAddress,
             Subtotal = subtotal,
             ShippingFee = shippingFee,
             TaxAmount = taxAmount,

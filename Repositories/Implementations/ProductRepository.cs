@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using EcommerceAPI.Common;
 using EcommerceAPI.Common.Options;
 using EcommerceAPI.DTOs.Products;
@@ -265,9 +266,7 @@ public class ProductRepository : IProductRepository
 
 
    
-    public async Task<bool> UpdateImagePathAsync(
-        int productId,
-        string imagePath,
+    public async Task<bool> UpdateImagePathAsync( int productId,  string imagePath,
         CancellationToken cancellationToken = default)
         {
             await using var connection = new SqlConnection(_connectionString);
@@ -294,7 +293,166 @@ public class ProductRepository : IProductRepository
                 : 0;
 
             return rowsAffected > 0;
+    }
+
+
+    public async Task<BulkCreateProductResponseDto> BulkCreateProductsAsync( List<CreateProductDto> products, CancellationToken cancellationToken = default)
+        {
+            var dataTable = new DataTable();
+
+            dataTable.Columns.Add("RowNumber", typeof(int));
+            dataTable.Columns.Add("Name", typeof(string));
+            dataTable.Columns.Add("Description", typeof(string));
+            dataTable.Columns.Add("CategoryId", typeof(int));
+            dataTable.Columns.Add("BrandId", typeof(int));
+            dataTable.Columns.Add("Price", typeof(decimal));
+            dataTable.Columns.Add("Rating", typeof(decimal));
+            dataTable.Columns.Add("StockQuantity", typeof(int));
+
+            for (int i = 0; i < products.Count; i++)
+            {
+                var product = products[i];
+
+                dataTable.Rows.Add(
+                    i + 1,
+                    product.Name,
+                    product.Description ?? string.Empty,
+                    product.CategoryId,
+                    product.BrandId,
+                    product.Price,
+                    product.Rating,
+                    product.StockQuantity
+                );
+            }
+
+
+            await using var connection = new SqlConnection(_connectionString);
+
+            await using var command = new SqlCommand(
+                "BhumikaEcom.usp_Product_BulkCreate",
+                connection);
+
+            command.CommandType = CommandType.StoredProcedure;
+
+            var parameter = command.Parameters.AddWithValue(
+                "@Products",
+                dataTable);
+
+            parameter.SqlDbType = SqlDbType.Structured;
+            parameter.TypeName = "BhumikaEcom.ProductBulkType";
+
+
+            await connection.OpenAsync(cancellationToken);
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+            var validationResults = new List<BulkProductValidationResultDto>();
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var result = new BulkProductValidationResultDto
+                {
+                    RowNumber = reader.GetInt32(reader.GetOrdinal("RowNumber")),
+                    Name = reader.IsDBNull(reader.GetOrdinal("Name")) ? string.Empty : reader.GetString(reader.GetOrdinal("Name")),
+                    IsValid = reader.GetBoolean(reader.GetOrdinal("IsValid")),
+                    Errors = new List<string>()
+                };
+
+                var errorsRaw = reader.IsDBNull(reader.GetOrdinal("Errors")) ? null : reader.GetString(reader.GetOrdinal("Errors"));
+
+                if (!string.IsNullOrWhiteSpace(errorsRaw))
+                {
+                    result.Errors = errorsRaw.Split('|', StringSplitOptions.RemoveEmptyEntries).ToList();
+                }
+
+                validationResults.Add(result);
+            }
+
+            return new BulkCreateProductResponseDto
+            {
+                TotalRecords = validationResults.Count,
+                SuccessfulRecords = validationResults.Count(x => x.IsValid),
+                FailedRecords = validationResults.Count(x => !x.IsValid),
+                Results = validationResults
+            };
+    }
+
+
+    public async Task<BulkInventoryUpdateResponseDto> BulkUpdateInventoryAsync( List<BulkInventoryUpdateItemDto> items,
+        CancellationToken cancellationToken = default)
+        {
+            var dataTable = new DataTable();
+
+            dataTable.Columns.Add("RowNumber", typeof(int));
+            dataTable.Columns.Add("ProductId", typeof(int));
+            dataTable.Columns.Add("StockQuantity", typeof(int));
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+
+                dataTable.Rows.Add(
+                    i + 1,
+                    item.ProductId,
+                    item.StockQuantity
+                );
+            }
+
+            var results = new List<BulkInventoryUpdateResultDto>();
+
+            using var connection = new SqlConnection(_connectionString);
+
+            using var command = new SqlCommand(
+                "BhumikaEcom.usp_Product_BulkUpdateInventory",
+                connection);
+
+            command.CommandType = CommandType.StoredProcedure;
+
+            var parameter = command.Parameters.Add(
+                "@Items",
+                SqlDbType.Structured);
+
+            parameter.TypeName = "BhumikaEcom.BulkInventoryUpdateType";
+            parameter.Value = dataTable;
+
+            await connection.OpenAsync(cancellationToken);
+
+            using var reader =
+                await command.ExecuteReaderAsync(cancellationToken);
+
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                results.Add(new BulkInventoryUpdateResultDto
+                {
+                    RowNumber = reader.GetInt32(
+                        reader.GetOrdinal("RowNumber")),
+
+                    ProductId = reader.GetInt32(
+                        reader.GetOrdinal("ProductId")),
+
+                    StockQuantity = reader.GetInt32(
+                        reader.GetOrdinal("StockQuantity")),
+
+                    IsValid = reader.GetBoolean(
+                        reader.GetOrdinal("IsValid")),
+
+                    ErrorMessage = reader.IsDBNull(
+                        reader.GetOrdinal("ErrorMessage"))
+                            ? null
+                            : reader.GetString(
+                                reader.GetOrdinal("ErrorMessage"))
+                });
+            }
+
+            return new BulkInventoryUpdateResponseDto
+            {
+                TotalRecords = results.Count,
+                SuccessfulRecords = results.Count(x => x.IsValid),
+                FailedRecords = results.Count(x => !x.IsValid),
+                Results = results
+            };
         }
+
 
 
 }

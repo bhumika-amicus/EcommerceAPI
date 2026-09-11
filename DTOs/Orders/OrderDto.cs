@@ -33,5 +33,8 @@ public class OrderDto
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<OrderItemDto>? Items { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<OrderStatusHistoryDto>? StatusHistory { get; set; }
 }
 
