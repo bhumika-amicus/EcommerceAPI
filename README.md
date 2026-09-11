@@ -1,86 +1,178 @@
-# E-Commerce API
+# EcommerceAPI
 
-## 📌 Overview
-This is a robust, enterprise-grade E-Commerce RESTful API built with **ASP.NET Core (.NET 8)**. The project is meticulously designed with a strong focus on clean architecture, security, centralized error handling, and comprehensive audit logging. It successfully implements all requirements across three core assignment phases: ADO.NET Foundations, Security & Middleware, and Production-Ready Features.
+## 1. Project Overview
+EcommerceAPI is a robust, highly-performant ASP.NET Core Web API designed to serve as the backend for an e-commerce platform. It provides endpoints for managing the full e-commerce lifecycle, including user authentication, product catalogs, shopping carts, checkout processing, mock payments, and order tracking. 
 
-## 🚀 Enterprise Features Implemented
-* **Layered Architecture:** Clear separation of concerns utilizing Controllers, Services, Interfaces, and Repositories.
-* **Security & Identity:** JWT-based authentication, secure BCrypt password hashing, and role-based access control (Admin vs. Standard User).
-* **Declarative Audit & Error Logging:** Automatic tracking of critical business events (Order Creation, Payment processing, Cancellations) into the `AuditLogs` table. Global exception handling middleware traps 500-level errors and stores them in the `ErrorLogs` table while returning RFC 7807 Problem Details to the client.
-* **API Versioning:** Supports URL-based API versioning (e.g., `/api/v1/...`, `/api/v2/...`) to strictly maintain backward compatibility across Product, Cart, Checkout, and Order APIs.
-* **Performance & Caching:** 
-  * **In-Memory Caching:** Used for frequently accessed taxonomy data (Categories).
-  * **Response Caching (Client-Side):** Used for large payload endpoints (Image Downloads) to reduce server load.
-* **Resilient Payment Integration:** Calls an external Mock Payment API to simulate transaction processing. Implements a critical failsafe to detect and log "Orphaned Payments" (when a card is charged successfully but the local database update fails).
-* **Database Security:** Direct table access is strictly restricted. **100%** of all database operations communicate with SQL Server through **Stored Procedures** and custom Table Types using ADO.NET (`SqlDataReader` / `SqlCommand`).
-
----
-
-## 🛤️ Comprehensive API Endpoints
-
-### 1. Authentication & Users (`/api/auth`)
-* `POST /api/auth/register` - Registers a new user with secure password hashing.
-* `POST /api/auth/login` - Authenticates credentials and issues a JWT token.
-
-### 2. Product Catalog & Versioning (`/api/v{version:apiVersion}/products`)
-* `GET /` - Retrieves the paginated catalog. Supports advanced filtering and sorting:
-  * *Query Params:* `search`, `categoryId`, `brandId`, `minPrice`, `maxPrice`, `minRating`, `sortBy`, `sortDirection`, `pageNumber`, `pageSize`.
-* `GET /{id}` - Retrieves details for a specific product.
-* `POST /` - *(Admin)* Creates a new product.
-* `PUT /{id}` - *(Admin)* Updates product details.
-* `DELETE /{id}` - *(Admin)* Deletes a product.
-* `GET /{id}/availability` - Checks real-time stock availability.
-* `POST /availability/batch` - Checks stock for multiple items at once using a custom SQL Table Type.
-
-### 3. Secure File Uploads (`/api/v{version:apiVersion}/products/{id}/image`)
-* `POST /` - *(Admin)* Uploads a product image. Features deep security checks including file extension validation, size limits (5MB max), and **Magic Byte validation** to prevent spoofed files. 
-* `GET /` - Downloads the product image. Utilizes `[ResponseCache]` to instruct the client browser to cache the image.
-
-### 4. Taxonomy & Pricing
-* `GET /api/categories` - Retrieves all categories. *(Cached In-Memory)*
-* `GET /api/categories/{id}` - Retrieves a specific category.
-* `GET /api/brands` - Retrieves all brands.
-* `GET /api/brands/{id}` - Retrieves a specific brand.
-* `GET /api/product-prices` - Retrieves current prices.
-* `POST /api/product-prices` - *(Admin)* Sets or updates product pricing.
-
-### 5. Shopping Cart (`/api/v{version:apiVersion}/cart`)
-* `GET /` - Retrieves the active cart for the logged-in customer.
-* `GET /count` - Gets the exact number of items currently in the cart.
-* `GET /subtotal` - Calculates the raw subtotal of the cart items.
-* `POST /items` - Adds a new item to the cart.
-* `PUT /items/{id}` - Updates the quantity of a specific line item.
-* `DELETE /items/{id}` - Removes a single item from the cart.
-* `DELETE /` - Clears the entire cart.
-
-### 6. Checkout Process (`/api/v{version:apiVersion}/checkout`)
-* `GET /shipping-methods` - Lists all available shipping options and their respective fees.
-* `POST /` - **Previews Checkout Calculation.** Validates the cart, checks real-time stock availability, and calculates the exact Tax, Shipping Charges, Subtotal, and Final Order Total before committing.
-
-### 7. Orders & History (`/api/v{version:apiVersion}/orders`)
-* `POST /` - **Creates Order.** Validates final stock, computes all totals, creates the order securely via SQL Transaction, and automatically **clears the customer's cart** upon success.
-* `GET /` - Retrieves the customer's Order History. Supports pagination and filtering by Order Status.
-* `GET /{id}` - Retrieves full details, line items, and totals for a specific order.
-* `PUT /{id}/cancel` - Cancels an active order, logging the action securely in the Audit logs.
-* `POST /{id}/reorder` - One-click reorder. Takes all items from a past order and drops them back into the active cart.
-
-### 8. Mock Payment Integration (`/api/orders/{orderId}/payments`)
-* `POST /` - Processes payment against the mock external API. If successful, stores the `TransactionReference` UUID. If the external mock API succeeds but the local DB fails, it fires a `LogCritical` warning into the `ErrorLogs` for immediate admin remediation.
-* `GET /` - Retrieves payment history logs for a specific order.
-
----
-
-## 🗄️ Database Stored Procedure Abstraction
-All database interactions are completely isolated from C# via the `BhumikaEcom` schema. Key procedures include:
-* **Core Logic:** `usp_Order_Create`, `usp_Payment_ProcessResult`, `usp_Product_ValidateBatchStock`
-* **Logging:** `usp_AuditLog_Create`, `usp_ErrorLog_Create`
-* **Cart Operations:** `usp_Cart_GetItemCount`, `usp_Cart_GetSubtotal`, `usp_Cart_Clear`
-
-## 🛠️ Tech Stack & Dependencies
-* **Framework:** ASP.NET Core Web API (.NET 8)
-* **Architecture:** N-Tier Layered Architecture (Controllers -> Services -> Repositories)
-* **Database:** Microsoft SQL Server
-* **Authentication:** JSON Web Tokens (JWT) & BCrypt
-* **Data Access:** ADO.NET (Raw SQL Connections)
+## 2. Technology Stack
+The project is built using a modern, scalable .NET architecture, strictly utilizing the following technologies:
+* **Framework:** ASP.NET Core 8 (C#)
+* **Database Access:** ADO.NET with SQL Server
+* **Database Logic:** Stored Procedures (for complex queries and aggregations)
 * **Validation:** FluentValidation
-* **Versioning:** `Asp.Versioning.Mvc`
+* **Authentication:** JWT (JSON Web Tokens) with Refresh Tokens
+* **Authorization:** Claims/Policy-based Authorization
+* **Caching:** `IMemoryCache` and standard Response Caching
+* **API Protection:** ASP.NET Core Rate Limiting middleware
+* **Documentation:** Swagger/OpenAPI
+* **Testing:** Postman & Newman
+
+## 3. Architecture
+The application follows a classic N-Tier Architecture.
+
+### Request Flow
+```text
+Client/Postman
+      ↓
+Middleware (Rate Limiting, Exception Handling, Auth)
+      ↓
+Routing (API Versioning)
+      ↓
+Controller
+      ↓
+Service
+      ↓
+Repository
+      ↓
+ADO.NET / Stored Procedure
+      ↓
+SQL Server
+      ↓
+Repository
+      ↓
+Service
+      ↓
+Controller (Returns ApiResponse<T>)
+      ↓
+JSON Response
+```
+
+### Component Responsibilities
+* **Controllers:** Handle HTTP routing, API versioning, attribute-based authorization, and return standardized `ApiResponse<T>` wrappers.
+* **Services:** Contain the core business logic. They process DTOs, orchestrate validations, and call repositories.
+* **Repositories:** Manage all database communication via ADO.NET and Stored Procedures using `SqlParameter` objects to prevent SQL injection.
+* **DTOs:** Data Transfer Objects strictly define the shape of requests and responses.
+* **Middlewares:** Handle cross-cutting concerns like Global Exception Handling and JWT validation.
+* **Validators:** FluentValidation classes that validate incoming DTOs before business logic executes.
+* **Common:** Houses shared utilities like Exceptions, the `ApiResponse` wrapper, and Security helpers.
+
+Dependency Injection (DI) is heavily utilized. All Services and Repositories are registered with a `Scoped` lifetime in `Program.cs`.
+
+## 4. Project Structure
+```text
+EcommerceAPI/
+├── Controllers/         # API Endpoints (Auth, Products, Cart, Orders, etc.)
+├── Services/            # Business logic and external clients (MockPaymentClient)
+│   ├── Implementations/
+│   └── Interfaces/
+├── Repositories/        # ADO.NET Data access classes
+│   ├── Implementations/
+│   └── Interfaces/
+├── DTOs/                # Request and Response data models
+├── Models/              # Domain entities
+├── Validators/          # FluentValidation rules for DTOs
+├── Middlewares/         # GlobalExceptionMiddleware
+├── Common/              # Shared classes (ApiResponse, Exceptions, Security)
+├── Properties/          # launchSettings.json
+├── Program.cs           # Application entry point & DI configuration
+└── appsettings.json     # Configuration files
+```
+
+## 5. Authentication & Authorization
+The API uses **JWT Authentication**.
+
+* **Register & Login:** Users register and log in via the `AuthenticationController` to receive an `AccessToken` and a `RefreshToken`.
+* **Access Tokens:** Short-lived tokens included in the `Authorization: Bearer <token>` header for protected endpoints.
+* **Refresh Tokens:** Long-lived tokens used to silently obtain a new Access Token when the old one expires.
+* **Authorization Policies:** Certain endpoints restrict access based on Claims. For example, `CanManageProducts` and `CanManageOrders` policies are implemented to restrict administrative endpoints to users possessing the appropriate administrative claims.
+
+## 6. Caching
+The application implements two caching strategies to improve performance:
+
+1. **Response Caching:** Standard `[ResponseCache(Duration = X)]` is applied to heavy read-only endpoints (e.g., getting the catalog of Brands or Categories).
+2. **Memory Cache:** `IMemoryCache` is utilized in services for frequently accessed, rarely changing data to prevent unnecessary database roundtrips. 
+
+## 7. Rate Limiting
+Global rate limiting is configured in `Program.cs` to prevent abuse:
+* Authenticated users are partitioned by their `ClaimTypes.NameIdentifier` (User ID).
+* Anonymous requests are partitioned by their IP Address.
+* If a client exceeds the defined request limit within the configured time window, the server automatically returns an `HTTP 429 Too Many Requests` response.
+
+## 8. Error Handling
+The application uses a `GlobalExceptionMiddleware` to catch all unhandled exceptions and return a standardized JSON error response.
+
+* **Business Exceptions:** Mapped to `400 Bad Request`.
+* **NotFound Exceptions:** Mapped to `404 Not Found`.
+* **Authentication/Authorization Exceptions:** Mapped to `401 Unauthorized` or `403 Forbidden`.
+* **Unhandled Server Exceptions:** Mapped to `500 Internal Server Error`.
+
+**Example Error Response:**
+```json
+{
+    "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
+    "title": "One or more validation errors occurred.",
+    "status": 400,
+    "errors": {
+        "Email": ["Invalid email format."]
+    }
+}
+```
+
+## 9. Validation
+Validation is achieved through **FluentValidation**.
+
+* **API/Request Validation:** Incoming DTOs are validated against strict rules (e.g., maximum string lengths, required fields, numeric ranges).
+* **Database Constraints:** `SqlParameter` objects are used in ADO.NET which inherently enforces database type constraints and prevents injection.
+
+## 10. API Versioning
+The API uses URL-based API versioning. All business endpoints (excluding Auth) are versioned.
+
+Example: `/api/v1/products` and `/api/v2/products`
+
+The system is configured with `AssumeDefaultVersionWhenUnspecified = true`, defaulting to `v1.0`.
+
+## 11. API Endpoints Reference
+A complete, detailed reference for every single API endpoint is available in the separate `docs/API_DOCUMENTATION.md` file.
+
+Below is a high-level summary of the controllers:
+* **Authentication:** `/api/auth` (Register, Login, Refresh)
+* **Products:** `/api/v1/products` and `/api/v2/products` (Catalog management, availability, bulk operations)
+* **Categories & Brands:** `/api/v1/categories` and `/api/v1/brands` (Read-only catalogs)
+* **Cart:** `/api/v1/cart` and `/api/v2/cart` (Manage active user cart)
+* **Checkout & Shipping:** `/api/v1/checkout` and `/api/v2/checkout` (Shipping methods and order placement)
+* **Orders:** `/api/v1/orders` and `/api/v2/orders` (Order history, cancellation, and reordering)
+* **Payments:** `/api/v1/orders/{orderId}/payments` and `/api/v1/mock-payments` (Payment processing simulation)
+* **Address:** `/api/v1/address` (User shipping addresses)
+* **ProductPrices:** `/api/v1/product-prices`
+
+## 12. Database
+The database interaction strictly avoids ORMs like Entity Framework in favor of high-performance **ADO.NET** and **Stored Procedures**.
+
+* **Repository Pattern:** Isolates all SQL commands from the business logic.
+* **Stored Procedures:** Used for complex operations, specifically the `usp_Product_GetPaged` procedure which handles highly-optimized searching, filtering, and paging for the product catalog.
+
+## 13. Security
+Security is a top priority in this implementation:
+* **JWT Authentication:** Secure, stateless token validation.
+* **Password Hashing:** Passwords are never stored in plain text.
+* **Parameterized SQL:** Direct defense against SQL injection via `SqlParameter`.
+* **Rate Limiting:** Defense against brute-force and DDoS attacks.
+* **CORS:** Controlled Cross-Origin Resource Sharing rules.
+
+## 14. Running the Project
+1. **Configure Database:** Ensure SQL Server is running. Update the connection string in `appsettings.Development.json` (do NOT commit secrets to Git).
+2. **Configure JWT:** Ensure a secure 32+ character JWT Key is present in your `appsettings.json`.
+3. **Build:** Open the terminal in the root directory and run `dotnet build`.
+4. **Run:** Execute `dotnet run`. The application will start.
+5. **Swagger:** Navigate to `https://localhost:<port>/swagger` in your browser to view the interactive API documentation.
+
+## 15. Postman Collection
+A full Postman collection is provided for testing.
+1. Import the `collection.json` file into Postman.
+2. If environment variables are used, import the `environment.json` file and select it.
+3. Run the **Auth -> Login** endpoint. Ensure you copy the returned `accessToken`.
+4. Set the token as a Bearer Token on the Collection root, or directly on the protected requests.
+5. You can now test Cart, Checkout, and Order endpoints!
+
+## 16. Testing
+The API can be tested manually via **Postman** or automatically via **Newman**.
+* **Newman Execution:** You can run the entire collection headlessly from the terminal using `newman run collection.json -e environment.json -r htmlextra` to generate a beautiful HTML execution report of the entire API lifecycle.
