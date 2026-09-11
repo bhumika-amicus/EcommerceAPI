@@ -2,6 +2,7 @@ using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EcommerceAPI.Common;
+using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.DTOs.Checkout;
 using EcommerceAPI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -57,6 +58,7 @@ public class CheckoutController : ControllerBase
 
     // POST: api/checkout
     [HttpPost]
+    [AuditLog("CHECKOUT_START", "Checkouts")]
     public async Task<ActionResult<ApiResponse<CheckoutDto>>> PreviewCheckout( [FromBody] CheckoutRequestDto dto, CancellationToken cancellationToken = default)
     {
         var checkout = await _checkoutService.PreviewCheckoutAsync( CurrentUserId, dto, cancellationToken);

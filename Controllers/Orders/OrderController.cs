@@ -2,6 +2,7 @@ using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EcommerceAPI.Common;
+using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.Common.Exceptions;
 using EcommerceAPI.DTOs.Cart;
 using EcommerceAPI.DTOs.Checkout;
@@ -44,6 +45,7 @@ public class OrderController : ControllerBase
 
     // POST: api/orders
     [HttpPost]
+    [AuditLog("ORDER_CREATE", "Orders")]
     public async Task<ActionResult<ApiResponse<OrderDto>>> CreateOrder( [FromBody] CheckoutRequestDto request, CancellationToken cancellationToken = default)
     {
         var order = await _orderService.CreateOrderAsync( CurrentUserId, request, cancellationToken);
@@ -104,6 +106,7 @@ public class OrderController : ControllerBase
 
     // POST: api/orders/{orderId}/reorder
     [HttpPost("{orderId:int}/reorder")]
+    [AuditLog("ORDER_REORDER", "Orders")]
     public async Task<ActionResult<ApiResponse<CartDto>>> Reorder(int orderId, CancellationToken cancellationToken = default)
     {
         if (orderId <= 0)
@@ -127,6 +130,7 @@ public class OrderController : ControllerBase
 
     // PUT: api/orders/{orderId}/cancel
     [HttpPut("{orderId:int}/cancel")]
+    [AuditLog("ORDER_CANCEL", "Orders")]
     public async Task<ActionResult<ApiResponse<OrderDto>>> CancelOrder(int orderId, CancellationToken cancellationToken = default)
     {
         if (orderId <= 0)

@@ -1,7 +1,7 @@
 using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using EcommerceAPI.Common;
+using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.DTOs.Payments;
 using EcommerceAPI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -31,7 +31,9 @@ public class PaymentController : ControllerBase {
     } 
     
     // POST: api/orders/{orderId}/payments
-    [HttpPost] public async Task<ActionResult<ApiResponse<PaymentDto>>> ProcessPayment( int orderId, [FromBody] PaymentRequestDto request, CancellationToken cancellationToken = default) {
+    [HttpPost]
+    [AuditLog("PAYMENT_PROCESS", "Payments")]
+    public async Task<ActionResult<ApiResponse<PaymentDto>>> ProcessPayment( int orderId, [FromBody] PaymentRequestDto request, CancellationToken cancellationToken = default) {
         
         var payment = await _paymentService.ProcessPaymentAsync( CurrentUserId, orderId, request, cancellationToken);
         

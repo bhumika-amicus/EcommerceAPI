@@ -1,6 +1,7 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Asp.Versioning;
+using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.DTOs.Cart;
 using EcommerceAPI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -95,6 +96,7 @@ public class CartV2Controller : ControllerBase
 
     // POST: api/v2/cart/items
     [HttpPost("items")]
+    [AuditLog("CART_ADD_ITEM", "Carts")]
     public async Task<IActionResult> AddItem(
         [FromBody] AddToCartDto dto,
         CancellationToken cancellationToken = default)
@@ -115,6 +117,7 @@ public class CartV2Controller : ControllerBase
 
     // PUT: api/v2/cart/items/{productId}
     [HttpPut("items/{productId:int}")]
+    [AuditLog("CART_UPDATE_ITEM", "Carts")]
     public async Task<IActionResult> UpdateQuantity(
         int productId,
         [FromBody] UpdateCartItemDto dto,
@@ -147,6 +150,7 @@ public class CartV2Controller : ControllerBase
 
     // DELETE: api/v2/cart/items/{productId}
     [HttpDelete("items/{productId:int}")]
+    [AuditLog("CART_REMOVE_ITEM", "Carts")]
     public async Task<IActionResult> RemoveItem(
         int productId,
         CancellationToken cancellationToken = default)
@@ -177,6 +181,7 @@ public class CartV2Controller : ControllerBase
 
     // DELETE: api/v2/cart
     [HttpDelete]
+    [AuditLog("CART_CLEAR", "Carts")]
     public async Task<IActionResult> ClearCart(
         CancellationToken cancellationToken = default)
     {

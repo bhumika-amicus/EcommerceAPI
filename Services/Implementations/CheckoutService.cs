@@ -1,7 +1,8 @@
-﻿using EcommerceAPI.Common.Exceptions;
+using EcommerceAPI.Common.Exceptions;
 using EcommerceAPI.DTOs.Checkout;
 using EcommerceAPI.DTOs.Products;
 using EcommerceAPI.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace EcommerceAPI.Services;
 
@@ -11,23 +12,27 @@ public class CheckoutService : ICheckoutService
     private readonly IProductService _productService;
     private readonly IShippingMethodService _shippingMethodService;
     private readonly IAddressService _addressService;
+    private readonly ILogger<CheckoutService> _logger;
 
-    public CheckoutService( ICartService cartService, IProductService productService, IShippingMethodService shippingMethodService,IAddressService addressService)
+    public CheckoutService( ICartService cartService, IProductService productService, IShippingMethodService shippingMethodService,IAddressService addressService, ILogger<CheckoutService> logger)
     {
         _cartService = cartService;
         _productService = productService;
         _shippingMethodService = shippingMethodService;
         _addressService = addressService;
+        _logger = logger;
     }
 
 
     public async Task<CheckoutDto> PreviewCheckoutAsync( int customerId, CheckoutRequestDto dto, CancellationToken cancellationToken = default)
     {
+        _logger.LogInformation("Starting checkout preview for customer {CustomerId}.", customerId);
         // 1. Get cart
         var cart = await _cartService.GetCartByCustomerIdAsync( customerId, cancellationToken);
         // 2. Check empty cart
         if (cart.Items.Count == 0)
         {
+            _logger.LogWarning("Checkout preview failed for customer {CustomerId}: Cart is empty.", customerId);
             throw new BusinessException( "Cannot proceed with checkout because the cart is empty.");
         }
 
@@ -44,7 +49,7 @@ public class CheckoutService : ICheckoutService
         if (unavailableItems.Any())
         {
             var message = string.Join( "; ",unavailableItems.Select(x => x.Message));
-
+            _logger.LogWarning("Checkout preview failed for customer {CustomerId}: Stock issues - {Message}", customerId, message);
             throw new BusinessException( $"Checkout cannot proceed due to stock issues: {message}");
         }
 
@@ -74,6 +79,7 @@ public class CheckoutService : ICheckoutService
         // 11. Shipping method must exist and be active
         if (shippingMethod == null)
         {
+            _logger.LogWarning("Checkout preview failed for customer {CustomerId}: Shipping method {ShippingMethodId} not found.", customerId, dto.ShippingMethodId);
             throw new NotFoundException(
                 $"Shipping method with ID {dto.ShippingMethodId} " + "does not exist or is currently unavailable.");
         }
@@ -94,6 +100,7 @@ public class CheckoutService : ICheckoutService
 
         if (address == null)
         {
+            _logger.LogWarning("Checkout preview failed for customer {CustomerId}: No shipping address found.", customerId);
             throw new BusinessException( "No shipping address found. Please add an address before checkout.");
         }
 

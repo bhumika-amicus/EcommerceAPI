@@ -1,8 +1,9 @@
-﻿
+
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Asp.Versioning;
 using EcommerceAPI.Common;
+using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.DTOs.Addresses;
 using EcommerceAPI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -65,6 +66,7 @@ public class AddressController : ControllerBase
 
     // PUT: api/v1/address
     [HttpPut]
+    [AuditLog("ADDRESS_UPDATE", "Addresses")]
     public async Task<ActionResult<ApiResponse<AddressDto>>> SaveAddress( [FromBody] AddressReqDto dto, CancellationToken cancellationToken = default)
     {
         var address = await _addressService.SaveAddressAsync( CurrentUserId,  dto,  cancellationToken);
@@ -79,6 +81,7 @@ public class AddressController : ControllerBase
 
     // DELETE: api/v1/address
     [HttpDelete]
+    [AuditLog("ADDRESS_DELETE", "Addresses")]
     public async Task<ActionResult<ApiResponse<object>>> DeleteAddress( CancellationToken cancellationToken = default)
     {
         var isDeleted = await _addressService.DeleteAddressAsync( CurrentUserId, cancellationToken);
