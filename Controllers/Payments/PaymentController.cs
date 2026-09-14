@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using EcommerceAPI.Common;
 using EcommerceAPI.Common.Attributes;
 using EcommerceAPI.DTOs.Payments;
